@@ -41,12 +41,12 @@ What this means:
 ```mermaid
 flowchart TD
     A[User opens Streamlit app] --> B[UI loads default simulation + physical parameters]
-    B --> C[User edits parameters\n(simulation, physical, boundaries, transducers)]
+    B --> C[User edits parameters (simulation, physical, boundaries, transducers)]
     C --> D[Parameter validation + state update]
     D --> E[Preview tab updates geometry + transducer layout]
     D --> F{Run clicked?}
     F -- No --> C
-    F -- Yes --> G[Phase 1: placeholder run\nprogress bar + estimated runtime]
+    F -- Yes --> G[Phase 1: placeholder run progress bar + estimated runtime]
     G --> H[Generate placeholder acoustic field]
     H --> I[Result tab renders colormap]
     I --> J[User modifies parameters]
