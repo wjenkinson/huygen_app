@@ -1,0 +1,195 @@
+"""
+Huygen App – Streamlit frontend (Phase 1).
+Run with:  streamlit run app/streamlit_app.py
+"""
+
+import streamlit as st
+import numpy as np
+
+from placeholder_solver import run_placeholder, estimate_runtime
+from ui_components import render_transducer_card, render_preview, render_field
+
+
+# ── Page config ──────────────────────────────────────────────────────────────
+
+st.set_page_config(
+    page_title="Huygen Acoustics Solver",
+    page_icon="🔊",
+    layout="wide",
+)
+
+
+# ── Session state defaults ───────────────────────────────────────────────────
+
+def _defaults():
+    defaults = {
+        "sources": [{"wall": "left", "position": 50.0, "power": 1.0,
+                      "is_line": False, "length": 0.0}],
+        "field": None,
+        "results_stale": False,
+        "has_run": False,
+        "last_params_hash": None,
+    }
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
+
+_defaults()
+
+
+def _params_hash() -> int:
+    """Quick hash of all user-facing parameters to detect staleness."""
+    parts = (
+        st.session_state.get("grid_nx"),
+        st.session_state.get("grid_ny"),
+        st.session_state.get("box_x"),
+        st.session_state.get("box_y"),
+        st.session_state.get("frequency"),
+        st.session_state.get("medium"),
+        st.session_state.get("attenuation"),
+        st.session_state.get("att_power"),
+        st.session_state.get("n_reflections"),
+        tuple(st.session_state.get("bd_top", "rigid")),
+        tuple(st.session_state.get("bd_bottom", "rigid")),
+        tuple(st.session_state.get("bd_left", "rigid")),
+        tuple(st.session_state.get("bd_right", "rigid")),
+        str(st.session_state["sources"]),
+    )
+    return hash(parts)
+
+
+# ── Header ───────────────────────────────────────────────────────────────────
+
+st.title("Huygen Acoustics Solver")
+st.caption(
+    "Interactive 2-D acoustic field explorer based on Huygens source "
+    "superposition.  ·  Phase 1 placeholder build"
+)
+
+
+# ── Sidebar: parameters ─────────────────────────────────────────────────────
+
+with st.sidebar:
+    st.header("Parameters")
+
+    # ---- Simulation ----
+    st.subheader("Simulation")
+
+    grid_nx = st.slider("Grid X points", 10, 100, 50, step=10, key="grid_nx")
+    grid_ny = st.slider("Grid Y points", 10, 200, 100, step=10, key="grid_ny")
+    box_x = st.slider("Box X (mm)", 1.0, 1000.0, 100.0, step=0.5, key="box_x")
+    box_y = st.slider("Box Y (mm)", 1.0, 1000.0, 200.0, step=0.5, key="box_y")
+    n_reflections = st.slider("Number of reflections", 1, 3, 1, step=1, key="n_reflections")
+
+    st.divider()
+
+    # ---- Physical ----
+    st.subheader("Physical")
+
+    frequency = st.slider("Frequency (MHz)", 1, 10, 2, step=1, key="frequency")
+    medium = st.selectbox("Medium", ["Water  (c=1500 m/s, ρ=1000 kg/m³)"], key="medium")
+    attenuation = st.slider("Attenuation coeff.", 0.0, 1.0, 0.0, step=0.1, key="attenuation")
+    att_power = st.slider("Attenuation power", 1.0, 2.0, 1.0, step=1.0, key="att_power")
+
+    st.divider()
+
+    # ---- Boundaries ----
+    st.subheader("Boundaries")
+    bd_top = st.radio("Top", ["rigid", "free"], horizontal=True, key="bd_top")
+    bd_bottom = st.radio("Bottom", ["rigid", "free"], horizontal=True, key="bd_bottom")
+    bd_left = st.radio("Left", ["rigid", "free"], horizontal=True, key="bd_left")
+    bd_right = st.radio("Right", ["rigid", "free"], horizontal=True, key="bd_right")
+
+    boundaries = {"top": bd_top, "bottom": bd_bottom, "left": bd_left, "right": bd_right}
+
+    st.divider()
+
+    # ---- Transducers ----
+    st.subheader("Transducers")
+
+    updated_sources: list[dict] = []
+    for i, src in enumerate(st.session_state["sources"]):
+        result = render_transducer_card(i, src)
+        if result is not None:
+            updated_sources.append(result)
+
+    if st.button("＋ Add transducer"):
+        updated_sources.append({
+            "wall": "left", "position": 50.0, "power": 1.0,
+            "is_line": False, "length": 0.0,
+        })
+
+    st.session_state["sources"] = updated_sources if updated_sources else st.session_state["sources"]
+
+    st.divider()
+
+    # ---- Estimated runtime ----
+    est = estimate_runtime(grid_nx, grid_ny, len(st.session_state["sources"]), n_reflections)
+    st.caption(f"Estimated run time ≈ {est:.2f} s")
+
+
+# ── Staleness detection ──────────────────────────────────────────────────────
+
+current_hash = _params_hash()
+if st.session_state["has_run"] and current_hash != st.session_state["last_params_hash"]:
+    st.session_state["results_stale"] = True
+
+
+# ── Main area: tabs ──────────────────────────────────────────────────────────
+
+tab_preview, tab_field = st.tabs(["Preview", "Acoustic Field"])
+
+with tab_preview:
+    fig_preview = render_preview(box_x, box_y, st.session_state["sources"], boundaries)
+    st.pyplot(fig_preview)
+
+with tab_field:
+    # Run button
+    col_run, col_info = st.columns([1, 3])
+    with col_run:
+        run_clicked = st.button("▶  Run", type="primary", use_container_width=True)
+    with col_info:
+        if st.session_state["results_stale"]:
+            st.warning("Parameters have changed since the last run — results may be out of date.")
+
+    if run_clicked:
+        st.session_state["results_stale"] = False
+        progress_bar = st.progress(0, text="Running solver…")
+
+        def _update_progress(frac: float):
+            progress_bar.progress(frac, text=f"Running solver… {int(frac*100)}%")
+
+        field = run_placeholder(
+            grid_nx=grid_nx,
+            grid_ny=grid_ny,
+            box_x=box_x,
+            box_y=box_y,
+            frequency_mhz=float(frequency),
+            sources=st.session_state["sources"],
+            n_reflections=n_reflections,
+            attenuation=attenuation,
+            attenuation_power=att_power,
+            boundaries=boundaries,
+            progress_callback=_update_progress,
+        )
+
+        progress_bar.empty()
+        st.session_state["field"] = field
+        st.session_state["has_run"] = True
+        st.session_state["last_params_hash"] = _params_hash()
+
+    if st.session_state["field"] is not None:
+        fig_field = render_field(st.session_state["field"], box_x, box_y)
+        st.pyplot(fig_field)
+    else:
+        st.info("Adjust parameters and click **Run** to generate the acoustic field.")
+
+
+# ── Footer / disclaimer ─────────────────────────────────────────────────────
+
+st.divider()
+st.caption(
+    "**Limitations:** 2-D slice model only · single-core execution · "
+    "simple rectangular geometry · uniform homogeneous liquid medium · "
+    "intended as an exploratory engineering tool, not a calibrated simulation."
+)

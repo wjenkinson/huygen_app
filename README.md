@@ -149,4 +149,3 @@ Expected base dependencies:
 - Simple geometry assumptions
 - Uniform homogeneous liquid medium
 - Intended as an exploratory engineering tool, not a full multiphysics production simulator
-# huygen_app
