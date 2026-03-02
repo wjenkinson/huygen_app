@@ -36,3 +36,6 @@ Thumbs.db
 
 # Legacy docs to keep out of repo
 README_OLD.md
+
+# Workspace
+*.code-workspace
