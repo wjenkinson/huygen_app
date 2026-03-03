@@ -162,8 +162,8 @@ def render_field(field: np.ndarray, box_x: float, box_y: float):
     Render the acoustic intensity colormap.
     Colour limits: vmin = 0.1*min, vmax = 0.9*max (per roadmap spec).
     """
-    vmin = 0.1 * field.min()
-    vmax = 0.9 * field.max() if field.max() > 0 else 1.0
+    vmin = 0
+    vmax = 1.0
 
     height = min(7 * box_y / max(box_x, 1), 8)
     fig, ax = plt.subplots(figsize=(7, height))

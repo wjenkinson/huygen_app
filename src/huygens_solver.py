@@ -357,9 +357,9 @@ def run_solver(
     # Extract intensity and normalise
     intensity = solver.get_intensity().T  # transpose to (ny, nx) for imshow
 
-    fmin, fmax = intensity.min(), intensity.max()
-    if fmax - fmin > 0:
-        intensity = (intensity - fmin) / (fmax - fmin)
+    p5, p95 = np.percentile(intensity, 5), np.percentile(intensity, 95)
+    if p95 - p5 > 0:
+        intensity = np.clip((intensity - p5) / (p95 - p5), 0.0, 1.0)
 
     if progress_callback:
         progress_callback(1.0)
