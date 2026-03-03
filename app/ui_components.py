@@ -54,7 +54,7 @@ def render_transducer_card(index: int, src: dict) -> dict | None:
         )
         is_line = st.toggle(
             "Line source",
-            value=src.get("is_line", False),
+            value=src.get("is_line", True),
             key=f"line_{index}",
         )
         length = 0.0
@@ -63,7 +63,7 @@ def render_transducer_card(index: int, src: dict) -> dict | None:
                 "Length (mm)",
                 min_value=1.0,
                 max_value=1000.0,
-                value=max(float(src.get("length", 20.0)), 1.0),
+                value=max(float(src.get("length", 20.0)), 2.0),
                 step=0.1,
                 key=f"len_{index}",
             )

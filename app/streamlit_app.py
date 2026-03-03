@@ -91,7 +91,7 @@ with st.sidebar:
         "Box X (mm)",
         min_value=1.0,
         max_value=1000.0,
-        value=100.0,
+        value=1.5,
         step=0.1,
         key="box_x",
     )
@@ -99,11 +99,11 @@ with st.sidebar:
         "Box Y (mm)",
         min_value=1.0,
         max_value=1000.0,
-        value=200.0,
+        value=3.0,
         step=0.1,
         key="box_y",
     )
-    n_reflections = st.slider("Number of reflections", 1, 3, 1, step=1, key="n_reflections")
+    n_reflections = st.slider("Number of reflections", 1, 3, 2, step=1, key="n_reflections")
 
     st.divider()
 
@@ -114,7 +114,7 @@ with st.sidebar:
         "Frequency (MHz)",
         min_value=0.001,
         max_value=10.0,
-        value=2.0,
+        value=1.0,
         step=0.001,
         format="%.3f",
         key="frequency",
@@ -239,6 +239,8 @@ with tab_field:
 st.divider()
 st.caption(
     "**Limitations:** 2-D slice model only · single-core execution · "
-    "simple rectangular geometry · uniform homogeneous liquid medium · "
-    "intended as an exploratory engineering tool, not a calibrated simulation."
+    "simple rectangular geometry · uniform homogeneous liquid medium"
+)
+st.caption(
+    "Intended as an exploratory engineering tool, not a calibrated simulation."
 )
