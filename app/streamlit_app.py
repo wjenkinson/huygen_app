@@ -188,7 +188,7 @@ if st.session_state["has_run"] and current_hash != st.session_state["last_params
 
 # ── Main area: tabs ──────────────────────────────────────────────────────────
 
-tab_preview, tab_field = st.tabs(["Preview", "Acoustic Field"])
+tab_preview, tab_field = st.tabs(["📐PREVIEW", "📊 RUN"])
 
 with tab_preview:
     fig_preview = render_preview(box_x, box_y, st.session_state["sources"], boundaries)
