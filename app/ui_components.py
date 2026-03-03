@@ -2,10 +2,16 @@
 Reusable Streamlit UI components for the Huygen app.
 """
 
+import sys
+import os
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+
 import streamlit as st
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
+from visualization import HUYGEN_CMAP
 
 
 # ---------------------------------------------------------------------------
@@ -53,11 +59,12 @@ def render_transducer_card(index: int, src: dict) -> dict | None:
         )
         length = 0.0
         if is_line:
-            length = st.slider(
+            length = st.number_input(
                 "Length (mm)",
-                1.0, 200.0,
-                value=float(src.get("length", 20.0)),
-                step=1.0,
+                min_value=1.0,
+                max_value=1000.0,
+                value=max(float(src.get("length", 20.0)), 1.0),
+                step=0.1,
                 key=f"len_{index}",
             )
 
@@ -79,7 +86,8 @@ def render_preview(box_x: float, box_y: float, sources: list[dict], boundaries: 
     Draw a schematic of the simulation domain showing boundaries and
     transducer positions.
     """
-    fig, ax = plt.subplots(figsize=(6, 6 * box_y / max(box_x, 1)))
+    height = min(6 * box_y / max(box_x, 1), 6)
+    fig, ax = plt.subplots(figsize=(6, height))
 
     # Domain rectangle
     rect = patches.Rectangle((0, 0), box_x, box_y,
@@ -157,12 +165,13 @@ def render_field(field: np.ndarray, box_x: float, box_y: float):
     vmin = 0.1 * field.min()
     vmax = 0.9 * field.max() if field.max() > 0 else 1.0
 
-    fig, ax = plt.subplots(figsize=(7, 7 * box_y / max(box_x, 1)))
+    height = min(7 * box_y / max(box_x, 1), 8)
+    fig, ax = plt.subplots(figsize=(7, height))
     im = ax.imshow(
         field,
         extent=[0, box_x, 0, box_y],
         origin="lower",
-        cmap="inferno",
+        cmap=HUYGEN_CMAP,
         vmin=vmin,
         vmax=vmax,
         aspect="auto",

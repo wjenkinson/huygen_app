@@ -1,22 +1,32 @@
 """
-Huygen App – Streamlit frontend (Phase 1).
+Huygen App – Streamlit frontend.
 Run with:  streamlit run app/streamlit_app.py
 """
 
-import streamlit as st
-import numpy as np
+import sys
+import os
 
-from placeholder_solver import run_placeholder, estimate_runtime
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+
+import streamlit as st
+
+from huygens_solver import run_solver
 from ui_components import render_transducer_card, render_preview, render_field
+
+APP_DIR = os.path.dirname(__file__)
+LOGO_PATH = os.path.join(APP_DIR, "..", "logos", "roseworks_logo.png")
 
 
 # ── Page config ──────────────────────────────────────────────────────────────
 
 st.set_page_config(
     page_title="Huygen Acoustics Solver",
-    page_icon="🔊",
+    page_icon="./logos/roseworks_favicon.png",
     layout="wide",
 )
+
+if os.path.exists(LOGO_PATH):
+    st.sidebar.image(LOGO_PATH, width="stretch")
 
 
 # ── Session state defaults ───────────────────────────────────────────────────
@@ -63,7 +73,7 @@ def _params_hash() -> int:
 st.title("Huygen Acoustics Solver")
 st.caption(
     "Interactive 2-D acoustic field explorer based on Huygens source "
-    "superposition.  ·  Phase 1 placeholder build"
+    "superposition."
 )
 
 
@@ -77,8 +87,22 @@ with st.sidebar:
 
     grid_nx = st.slider("Grid X points", 10, 100, 50, step=10, key="grid_nx")
     grid_ny = st.slider("Grid Y points", 10, 200, 100, step=10, key="grid_ny")
-    box_x = st.slider("Box X (mm)", 1.0, 1000.0, 100.0, step=0.5, key="box_x")
-    box_y = st.slider("Box Y (mm)", 1.0, 1000.0, 200.0, step=0.5, key="box_y")
+    box_x = st.number_input(
+        "Box X (mm)",
+        min_value=1.0,
+        max_value=1000.0,
+        value=100.0,
+        step=0.1,
+        key="box_x",
+    )
+    box_y = st.number_input(
+        "Box Y (mm)",
+        min_value=1.0,
+        max_value=1000.0,
+        value=200.0,
+        step=0.1,
+        key="box_y",
+    )
     n_reflections = st.slider("Number of reflections", 1, 3, 1, step=1, key="n_reflections")
 
     st.divider()
@@ -86,7 +110,27 @@ with st.sidebar:
     # ---- Physical ----
     st.subheader("Physical")
 
-    frequency = st.slider("Frequency (MHz)", 1, 10, 2, step=1, key="frequency")
+    frequency = st.number_input(
+        "Frequency (MHz)",
+        min_value=0.001,
+        max_value=10.0,
+        value=2.0,
+        step=0.001,
+        format="%.3f",
+        key="frequency",
+    )
+
+    # Half-wavelength check
+    c_water = 1500.0  # m/s
+    half_wavelength_mm = (c_water / (frequency * 1e6)) / 2.0 * 1e3
+    dx_mm = box_x / max(grid_nx - 1, 1)
+    dy_mm = box_y / max(grid_ny - 1, 1)
+    if dx_mm > half_wavelength_mm or dy_mm > half_wavelength_mm:
+        st.warning(
+            f"Grid spacing ({dx_mm:.2f} × {dy_mm:.2f} mm) exceeds "
+            f"λ/2 = {half_wavelength_mm:.2f} mm. Results may be under-resolved."
+        )
+
     medium = st.selectbox("Medium", ["Water  (c=1500 m/s, ρ=1000 kg/m³)"], key="medium")
     attenuation = st.slider("Attenuation coeff.", 0.0, 1.0, 0.0, step=0.1, key="attenuation")
     att_power = st.slider("Attenuation power", 1.0, 2.0, 1.0, step=1.0, key="att_power")
@@ -123,10 +167,6 @@ with st.sidebar:
 
     st.divider()
 
-    # ---- Estimated runtime ----
-    est = estimate_runtime(grid_nx, grid_ny, len(st.session_state["sources"]), n_reflections)
-    st.caption(f"Estimated run time ≈ {est:.2f} s")
-
 
 # ── Staleness detection ──────────────────────────────────────────────────────
 
@@ -141,13 +181,20 @@ tab_preview, tab_field = st.tabs(["Preview", "Acoustic Field"])
 
 with tab_preview:
     fig_preview = render_preview(box_x, box_y, st.session_state["sources"], boundaries)
-    st.pyplot(fig_preview)
+    col_viz, _ = st.columns([1, 1])
+    with col_viz:
+        st.pyplot(fig_preview)
 
 with tab_field:
     # Run button
-    col_run, col_info = st.columns([1, 3])
+    n_src = len(st.session_state["sources"])
+    est = 0.3 + (grid_nx * grid_ny * n_src * n_reflections) * 5e-6
+
+    col_run, col_est, col_info = st.columns([1, 1, 2])
     with col_run:
-        run_clicked = st.button("▶  Run", type="primary", use_container_width=True)
+        run_clicked = st.button("▶  Run", type="primary", width="stretch")
+    with col_est:
+        st.caption(f"Est. runtime ≈ {est:.1f} s")
     with col_info:
         if st.session_state["results_stale"]:
             st.warning("Parameters have changed since the last run — results may be out of date.")
@@ -159,7 +206,7 @@ with tab_field:
         def _update_progress(frac: float):
             progress_bar.progress(frac, text=f"Running solver… {int(frac*100)}%")
 
-        field = run_placeholder(
+        field = run_solver(
             grid_nx=grid_nx,
             grid_ny=grid_ny,
             box_x=box_x,
@@ -180,7 +227,9 @@ with tab_field:
 
     if st.session_state["field"] is not None:
         fig_field = render_field(st.session_state["field"], box_x, box_y)
-        st.pyplot(fig_field)
+        col_viz2, _ = st.columns([1, 1])
+        with col_viz2:
+            st.pyplot(fig_field)
     else:
         st.info("Adjust parameters and click **Run** to generate the acoustic field.")
 

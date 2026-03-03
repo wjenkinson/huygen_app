@@ -36,6 +36,8 @@ Thumbs.db
 
 # Legacy docs to keep out of repo
 README_OLD.md
+solver_OLD.py
+visualization_OLD.py
 
 # Workspace
 *.code-workspace
