@@ -39,6 +39,8 @@ def _defaults():
         "results_stale": False,
         "has_run": False,
         "last_params_hash": None,
+        "run_count": 0,
+        "promo_dismissed": False,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -196,7 +198,21 @@ with tab_field:
     with col_est:
         st.caption(f"Est. runtime ≈ {est:.1f} s")
     with col_info:
-        if st.session_state["results_stale"]:
+        if (
+            st.session_state["run_count"] >= 5
+            and not st.session_state["promo_dismissed"]
+        ):
+            st.info(
+                "**💡Enjoying the app?** I provide a range of services to life science "
+                "R&D teams considering digital tools. 📩 Reach out on "
+                "[LinkedIn](https://www.linkedin.com/in/william-jenkinson/), "
+                "[Malt](https://www.malt.fr/profile/billyjenkinson), "
+                "or email at [billy@roseworks.fr](mailto:billy@roseworks.fr)."
+            )
+            if st.button("Dismiss", key="dismiss_promo"):
+                st.session_state["promo_dismissed"] = True
+                st.rerun()
+        elif st.session_state["results_stale"]:
             st.warning("Parameters have changed since the last run — results may be out of date.")
 
     if run_clicked:
@@ -223,6 +239,7 @@ with tab_field:
         progress_bar.empty()
         st.session_state["field"] = field
         st.session_state["has_run"] = True
+        st.session_state["run_count"] = st.session_state.get("run_count", 0) + 1
         st.session_state["last_params_hash"] = _params_hash()
 
     if st.session_state["field"] is not None:
