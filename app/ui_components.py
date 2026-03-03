@@ -174,7 +174,7 @@ def render_field(field: np.ndarray, box_x: float, box_y: float):
         cmap=HUYGEN_CMAP,
         vmin=vmin,
         vmax=vmax,
-        aspect="auto",
+        aspect="equal",
     )
     fig.colorbar(im, ax=ax, label="Normalised intensity (a.u.)")
     ax.set_xlabel("x (mm)")
