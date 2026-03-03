@@ -164,6 +164,7 @@ with st.sidebar:
             "wall": "left", "position": 50.0, "power": 1.0,
             "is_line": False, "length": 0.0,
         })
+        st.session_state("sources")
         st.rerun()
 
     st.session_state["sources"] = updated_sources if updated_sources else st.session_state["sources"]
