@@ -78,6 +78,21 @@ st.caption(
     "superposition."
 )
 
+if (
+    st.session_state["run_count"] >= 5
+    and not st.session_state["promo_dismissed"]
+):
+    st.info(
+        "**💡Enjoying the app?** I provide a range of services to life science "
+        "R&D teams considering digital tools. 📩 Reach out on "
+        "[LinkedIn](https://www.linkedin.com/in/william-jenkinson/), "
+        "[Malt](https://www.malt.fr/profile/billyjenkinson), "
+        "or email at [billy@roseworks.fr](mailto:billy@roseworks.fr)."
+    )
+    if st.button("Dismiss", key="dismiss_promo"):
+        st.session_state["promo_dismissed"] = True
+        st.rerun()
+
 
 # ── Sidebar: parameters ─────────────────────────────────────────────────────
 
@@ -186,43 +201,29 @@ if st.session_state["has_run"] and current_hash != st.session_state["last_params
     st.session_state["results_stale"] = True
 
 
-# ── Main area: tabs ──────────────────────────────────────────────────────────
+# ── Main area: two-column layout ─────────────────────────────────────────────
 
-tab_preview, tab_field = st.tabs(["📐PREVIEW", "📊 RUN"])
+col_left, col_right = st.columns([1, 1])
 
-with tab_preview:
+with col_left:
+    st.subheader("📐 Preview")
     fig_preview = render_preview(box_x, box_y, st.session_state["sources"], boundaries)
-    col_viz, _ = st.columns([1, 1])
-    with col_viz:
-        st.pyplot(fig_preview)
+    st.pyplot(fig_preview)
 
-with tab_field:
-    # Run button
+with col_right:
+    st.subheader("📊 Run")
+
     n_src = len(st.session_state["sources"])
     est = 0.3 + (grid_nx * grid_ny * n_src * n_reflections) * 5e-6
 
-    col_run, col_est, col_info = st.columns([1, 1, 2])
+    col_run, col_est = st.columns([1, 1])
     with col_run:
         run_clicked = st.button("▶  Run", type="primary", width="stretch")
     with col_est:
         st.caption(f"Est. runtime ≈ {est:.1f} s")
-    with col_info:
-        if (
-            st.session_state["run_count"] >= 5
-            and not st.session_state["promo_dismissed"]
-        ):
-            st.info(
-                "**💡Enjoying the app?** I provide a range of services to life science "
-                "R&D teams considering digital tools. 📩 Reach out on "
-                "[LinkedIn](https://www.linkedin.com/in/william-jenkinson/), "
-                "[Malt](https://www.malt.fr/profile/billyjenkinson), "
-                "or email at [billy@roseworks.fr](mailto:billy@roseworks.fr)."
-            )
-            if st.button("Dismiss", key="dismiss_promo"):
-                st.session_state["promo_dismissed"] = True
-                st.rerun()
-        elif st.session_state["results_stale"]:
-            st.warning("Parameters have changed since the last run — results may be out of date.")
+
+    if st.session_state["results_stale"]:
+        st.warning("Parameters have changed since the last run — results may be out of date.")
 
     if run_clicked:
         st.session_state["results_stale"] = False
@@ -253,9 +254,7 @@ with tab_field:
 
     if st.session_state["field"] is not None:
         fig_field = render_field(st.session_state["field"], box_x, box_y)
-        col_viz2, _ = st.columns([1, 1])
-        with col_viz2:
-            st.pyplot(fig_field)
+        st.pyplot(fig_field)
     else:
         st.info("Adjust parameters and click **Run** to generate the acoustic field.")
 
