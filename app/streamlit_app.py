@@ -154,17 +154,24 @@ with st.sidebar:
     st.subheader("Transducers")
 
     updated_sources: list[dict] = []
+    deleted = False
     for i, src in enumerate(st.session_state["sources"]):
         result = render_transducer_card(i, src)
         if result is not None:
             updated_sources.append(result)
+        else:
+            deleted = True
 
     if st.button("＋ Add transducer"):
         updated_sources.append({
             "wall": "left", "position": 50.0, "power": 1.0,
             "is_line": False, "length": 0.0,
         })
-        st.session_state("sources")
+        st.session_state["sources"] = updated_sources
+        st.rerun()
+
+    if deleted:
+        st.session_state["sources"] = updated_sources if updated_sources else st.session_state["sources"]
         st.rerun()
 
     st.session_state["sources"] = updated_sources if updated_sources else st.session_state["sources"]
