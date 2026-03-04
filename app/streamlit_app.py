@@ -251,6 +251,7 @@ with col_right:
         st.session_state["has_run"] = True
         st.session_state["run_count"] = st.session_state.get("run_count", 0) + 1
         st.session_state["last_params_hash"] = _params_hash()
+        st.rerun()
 
     if st.session_state["field"] is not None:
         fig_field = render_field(st.session_state["field"], box_x, box_y)
